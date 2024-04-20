@@ -1,5 +1,12 @@
 package com.francesc.sharedelement
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -11,31 +18,46 @@ import com.francesc.sharedelement.list.ListScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Home(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "list", modifier = modifier) {
-        composable(
-            route = "list"
+    SharedTransitionLayout(
+        modifier = modifier,
+    ) {
+        NavHost(
+            navController = navController,
+            startDestination = "list",
+            modifier = Modifier.fillMaxSize(),
+            enterTransition = { slideInHorizontally { it } + fadeIn() },
+            exitTransition = { slideOutHorizontally { -it } + fadeOut() },
+            popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
+            popExitTransition = { slideOutHorizontally { it } + fadeOut() },
         ) {
-            ListScreen(
-                onItemClick = { item ->
-                    val encoded = URLEncoder.encode(item, "UTF-8")
-                    navController.navigate("details/$encoded")
-                },
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        composable(
-            route = "details/{item}"
-        ) { backstackEntry ->
-            val encoded = backstackEntry.arguments?.getString("item") ?: error("No URL")
-            val url = URLDecoder.decode(encoded, "UTF-8")
-            DetailsScreen(
-                url = url,
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.fillMaxSize(),
-            )
+            composable(
+                route = "list"
+            ) {
+                ListScreen(
+                    animatedVisibilityScope = this@composable,
+                    onItemClick = { item ->
+                        val encoded = URLEncoder.encode(item, "UTF-8")
+                        navController.navigate("details/$encoded")
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            composable(
+                route = "details/{url}"
+            ) { backstackEntry ->
+                val encoded = backstackEntry.arguments?.getString("url") ?: error("No URL")
+                val url = URLDecoder.decode(encoded, "UTF-8")
+                DetailsScreen(
+                    url = url,
+                    animatedVisibilityScope = this@composable,
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
